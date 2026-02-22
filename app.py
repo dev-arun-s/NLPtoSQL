@@ -501,7 +501,7 @@ HTML = '''<!DOCTYPE html>
 
     <div class="input-footer">
       <span class="hint"><kbd>Ctrl</kbd><kbd>Enter</kbd> to run</span>
-      <button id="run-btn" onclick="runQuery()">
+      <button id="run-btn">
         <span>Generate SQL</span>
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -517,7 +517,7 @@ HTML = '''<!DOCTYPE html>
           <span class="tag tag-sql">SQL</span>
           <span class="tables-label" id="tables-label"></span>
         </div>
-        <button class="copy-btn" onclick="copySQL()">Copy</button>
+        <button class="copy-btn" id="copy-btn">Copy</button>
       </div>
       <pre><code id="sql-output"></code></pre>
     </div>
@@ -643,11 +643,17 @@ function addToHistory(query, sql) {
   // Keep last 8
   const recent = history.slice(0, 8);
   list.innerHTML = recent.map((h, i) => `
-    <div class="history-item" onclick="loadHistory(${i})">
+    <div class="history-item" data-index="${i}">
       <span class="history-q">${escHtml(h.query)}</span>
       <span class="history-time">${h.time}</span>
     </div>
   `).join('');
+
+  // Use event delegation instead of inline onclick
+  list.onclick = e => {
+    const item = e.target.closest('.history-item');
+    if (item) loadHistory(parseInt(item.dataset.index));
+  };
 }
 
 function loadHistory(i) {
@@ -659,6 +665,10 @@ function loadHistory(i) {
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// Wire up all event listeners here — no inline onclick handlers
+document.getElementById('run-btn').addEventListener('click', runQuery);
+document.getElementById('copy-btn').addEventListener('click', copySQL);
 
 // Ctrl+Enter to submit
 document.addEventListener('keydown', e => {
