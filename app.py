@@ -534,54 +534,54 @@ HTML = '''<!DOCTYPE html>
 
 </div>
 
+{% raw %}
 <script>
-const history = [];
+const queryHistory = [];   // renamed — 'history' clashes with window.history
 
 async function runQuery() {
-  const prompt = document.getElementById('prompt').value.trim();
-  if (!prompt) return;
+  const promptEl   = document.getElementById('prompt');
+  const promptText = promptEl.value.trim();
+  if (!promptText) return;
 
-  const btn       = document.getElementById('run-btn');
+  const btn         = document.getElementById('run-btn');
   const resultPanel = document.getElementById('result-panel');
-  const errorBox  = document.getElementById('error-box');
+  const errorBox    = document.getElementById('error-box');
 
-  // Loading state
   btn.disabled = true;
   btn.classList.add('loading');
   resultPanel.classList.remove('visible');
   errorBox.classList.remove('visible');
+  errorBox.textContent = '';
 
   try {
     const res = await fetch('/query', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: prompt })
+      body:    JSON.stringify({ query: promptText })
     });
 
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      throw new Error(data.error || `Server error ${res.status}`);
+      throw new Error(data.error || ('Server error ' + res.status));
     }
 
-    // Render SQL with syntax highlighting
     document.getElementById('sql-output').innerHTML = highlight(data.sql);
 
-    // Show matched tables
     const tablesLabel = document.getElementById('tables-label');
     if (data.matched_tables && data.matched_tables.length) {
       tablesLabel.innerHTML = 'Tables: ' + data.matched_tables
-        .map(t => `<span>${t}</span>`)
+        .map(function(t) { return '<span>' + escHtml(t) + '</span>'; })
         .join(', ');
     } else {
       tablesLabel.innerHTML = '';
     }
 
     resultPanel.classList.add('visible');
-    addToHistory(prompt, data.sql);
+    addToHistory(promptText, data.sql);
 
   } catch (err) {
-    errorBox.textContent = '⚠ ' + err.message;
+    errorBox.textContent = 'Error: ' + err.message;
     errorBox.classList.add('visible');
   } finally {
     btn.disabled = false;
@@ -600,65 +600,71 @@ function highlight(sql) {
   ];
 
   // Escape HTML first
-  let out = sql
+  var out = sql
     .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;');
 
-  // Comments
-  out = out.replace(/(--[^\n]*)/g, m => `<span class="cmt">${m}</span>`);
+  // Comments  (-- to end of line)
+  out = out.replace(/(--[^\n]*)/g, function(m) {
+    return '<span class="cmt">' + m + '</span>';
+  });
 
-  // Strings
-  out = out.replace(/'([^']*)'/g, m => `<span class="str">${m}</span>`);
+  // Quoted strings
+  out = out.replace(/'([^']*)'/g, function(m) {
+    return '<span class="str">' + m + '</span>';
+  });
 
   // Numbers
-  out = out.replace(/\b(\d+(\.\d+)?)\b/g, m => `<span class="num">${m}</span>`);
+  out = out.replace(/\b(\d+(\.\d+)?)\b/g, function(m) {
+    return '<span class="num">' + m + '</span>';
+  });
 
-  // Keywords (case-insensitive, whole word)
-  keywords.forEach(kw => {
-    const re = new RegExp(`\\b(${kw})\\b`, 'gi');
-    out = out.replace(re, m => `<span class="kw">${m}</span>`);
+  // SQL keywords
+  keywords.forEach(function(kw) {
+    var re = new RegExp('\\b(' + kw + ')\\b', 'gi');
+    out = out.replace(re, function(m) {
+      return '<span class="kw">' + m + '</span>';
+    });
   });
 
   return out;
 }
 
 function copySQL() {
-  const raw = document.getElementById('sql-output').textContent;
-  navigator.clipboard.writeText(raw).then(() => {
-    const btn = document.querySelector('.copy-btn');
+  var raw = document.getElementById('sql-output').textContent;
+  navigator.clipboard.writeText(raw).then(function() {
+    var btn = document.getElementById('copy-btn');
     btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 1800);
+    setTimeout(function() { btn.textContent = 'Copy'; }, 1800);
   });
 }
 
 function addToHistory(query, sql) {
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  history.unshift({ query, sql, time: now });
+  var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  queryHistory.unshift({ query: query, sql: sql, time: now });
 
-  const section = document.getElementById('history-section');
-  const list    = document.getElementById('history-list');
+  var section = document.getElementById('history-section');
+  var list    = document.getElementById('history-list');
   section.style.display = 'block';
 
-  // Keep last 8
-  const recent = history.slice(0, 8);
-  list.innerHTML = recent.map((h, i) => `
-    <div class="history-item" data-index="${i}">
-      <span class="history-q">${escHtml(h.query)}</span>
-      <span class="history-time">${h.time}</span>
-    </div>
-  `).join('');
+  var recent = queryHistory.slice(0, 8);
+  list.innerHTML = recent.map(function(h, i) {
+    return '<div class="history-item" data-index="' + i + '">' +
+             '<span class="history-q">' + escHtml(h.query) + '</span>' +
+             '<span class="history-time">' + h.time + '</span>' +
+           '</div>';
+  }).join('');
 
-  // Use event delegation instead of inline onclick
-  list.onclick = e => {
-    const item = e.target.closest('.history-item');
-    if (item) loadHistory(parseInt(item.dataset.index));
+  list.onclick = function(e) {
+    var item = e.target.closest('.history-item');
+    if (item) loadHistory(parseInt(item.dataset.index, 10));
   };
 }
 
 function loadHistory(i) {
-  document.getElementById('prompt').value = history[i].query;
-  document.getElementById('sql-output').innerHTML = highlight(history[i].sql);
+  document.getElementById('prompt').value = queryHistory[i].query;
+  document.getElementById('sql-output').innerHTML = highlight(queryHistory[i].sql);
   document.getElementById('result-panel').classList.add('visible');
 }
 
@@ -666,15 +672,13 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Wire up all event listeners here — no inline onclick handlers
 document.getElementById('run-btn').addEventListener('click', runQuery);
 document.getElementById('copy-btn').addEventListener('click', copySQL);
-
-// Ctrl+Enter to submit
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runQuery();
 });
 </script>
+{% endraw %}
 </body>
 </html>'''
 
