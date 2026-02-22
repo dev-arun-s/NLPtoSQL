@@ -90,7 +90,9 @@ def parse_file(filepath: str) -> list:
 
         table_name = match.group(1).lower()
         columns    = extract_columns(stmt)
-        fk_refs    = [f.lower() for f in re.findall(r'REFERENCES\s+(?:\[?\w+\]?\.)??\[?(\w+)\]?', stmt, re.IGNORECASE)]
+        #fk_refs    = [f.lower() for f in re.findall(r'REFERENCES\s+(?:\[?\w+\]?\.)??\[?(\w+)\]?', stmt, re.IGNORECASE)]
+        fk_refs = re.findall(r'REFERENCES\s+(?:\[?\w+\]?\.)?\[?(\w+)\]?',stmt, re.IGNORECASE)
+
         comments   = re.findall(r'--[^\n]*', stmt)
 
         chunks.append({
