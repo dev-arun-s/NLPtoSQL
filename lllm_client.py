@@ -7,7 +7,7 @@ from config import LLM_ENDPOINT, LLM_BEARER, LLM_MODEL
 def call_llm(system_prompt: str, user_prompt: str) -> str:
     """
     Call an OpenAI-compatible endpoint with Bearer token auth.
-    Uses only Python stdlib — no extra packages needed.
+    Uses only Python stdlib (urllib) — no extra packages needed.
     """
     headers = {
         "Content-Type":  "application/json",
