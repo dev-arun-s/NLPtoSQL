@@ -606,18 +606,18 @@ function highlight(sql) {
     .replace(/>/g, '&gt;');
 
   // Comments
-  out = out.replace(/(--[^\n]*)/g, '<span class="cmt">$1</span>');
+  out = out.replace(/(--[^\n]*)/g, m => `<span class="cmt">${m}</span>`);
 
   // Strings
-  out = out.replace(/'([^']*)'/g, "<span class='str'>'$1'</span>");
+  out = out.replace(/'([^']*)'/g, m => `<span class="str">${m}</span>`);
 
   // Numbers
-  out = out.replace(/\b(\d+(\.\d+)?)\b/g, '<span class="num">$1</span>');
+  out = out.replace(/\b(\d+(\.\d+)?)\b/g, m => `<span class="num">${m}</span>`);
 
   // Keywords (case-insensitive, whole word)
   keywords.forEach(kw => {
     const re = new RegExp(`\\b(${kw})\\b`, 'gi');
-    out = out.replace(re, '<span class="kw">$1</span>');
+    out = out.replace(re, m => `<span class="kw">${m}</span>`);
   });
 
   return out;
